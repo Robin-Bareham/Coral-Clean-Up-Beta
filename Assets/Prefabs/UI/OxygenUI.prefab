@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 9100330097813070979}
   m_Layer: 5
   m_Name: OxygenUI
-  m_TagString: Untagged
+  m_TagString: UI
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -418,8 +418,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6200259c449b0b42b37bb577102718a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Oxygen
+  manager: {fileID: 0}
   time_slider: {fileID: 3223454181652508192}
   warning_text: {fileID: 8686489676134354985}
+  spawn: {fileID: 0}
+  player: {fileID: 0}
   time_limit: 20
   remaining_time: 0
   underwater: 0
