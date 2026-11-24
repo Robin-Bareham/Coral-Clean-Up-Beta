@@ -15,7 +15,10 @@ public class CharacterController : MonoBehaviour
     [SerializeField]
     private float moveForce = 10f;
     [SerializeField]
-    private float verticalForce = 10f;
+    private float decelerationMultiplier = 2.0f;
+    [SerializeField]
+    private float decelerationCutoff = 0.5f;
+
 
     [SerializeField] GameManager manager;
 
@@ -76,7 +79,7 @@ public class CharacterController : MonoBehaviour
             //Debug.Log("X = " + moveInput.x);
             //Debug.Log("Y = " + moveInput.y);
             //Debug.Log("Angular: x = " + rBody.angularVelocity.x + ", y = " + rBody.angularVelocity.y);
-            Debug.Log("Linear: x = " + rBody.linearVelocity.x + ", y = " + rBody.linearVelocity.y + ", z = " + rBody.linearVelocity.z);        
+            //Debug.Log("Linear: x = " + rBody.linearVelocity.x + ", y = " + rBody.linearVelocity.y + ", z = " + rBody.linearVelocity.z);        
 
             verticalInput = 0;
             if (riseAction.IsPressed())
@@ -98,8 +101,8 @@ public class CharacterController : MonoBehaviour
                     rBody.linearVelocity = Vector3.zero;
                 }
             }
-        }
-        HandleDeceleration();
+            
+        }        
     }
 
     private void FixedUpdate()
@@ -108,6 +111,7 @@ public class CharacterController : MonoBehaviour
         {
             //Movement handling here as rigidbody force is handled during physics step
             HandleMovement();
+            HandleDeceleration();
         }
     }
 
@@ -127,12 +131,14 @@ public class CharacterController : MonoBehaviour
         //Calculate movement relative to camera
         // Horizontal movement: X and Z axes
         Vector3 movement = (right * moveInput.x) + (forward * moveInput.y);
+
+        //Calculate vertical input movement relative to plane 
         // Vertical movement: Y axis
-        movement += cameraRotation.up * verticalInput;
+        movement.y += (float)verticalInput;
 
         // Apply force across all three axes
         // Left/Right, Up/Down, Forward/Back
-        rBody.AddForce(movement.x * moveForce, movement.y * verticalForce, movement.z * moveForce, ForceMode.Force);
+        rBody.AddForce(movement.x * moveForce, movement.y * moveForce, movement.z * moveForce, ForceMode.Force);
     }
 
     private void HandleDeceleration()
@@ -144,81 +150,88 @@ public class CharacterController : MonoBehaviour
         // Interpret the axes relative to the camera's view
         float forwardSpeed = relativeVelocity.z; // Positive = moving with camera view, Negative = moving toward camera
         float rightSpeed = relativeVelocity.x;   // Positive = moving right, Negative = moving left
-        float upSpeed = relativeVelocity.y;      // Positive = moving up, Negative = moving down
+        float upSpeed = worldVelocity.y;      // Positive = moving up, Negative = moving down. world velocity used as not tied to camera
 
-        //Debug.Log("Forward Speed: " + forwardSpeed);
-        //Debug.Log("Right Speed: " + rightSpeed);
-        //Debug.Log("Up Speed: " +  upSpeed);
+        float decelForce = moveForce * decelerationMultiplier;
 
-        //Affect input relative to actual input and velocity
+        // Left/Right deceleration
         if (moveInput.x == 0)
         {
             //Debug.Log("MoveInput x is Zero: " + moveInput.x);
             //Debug.Log("Right Speed: " + rightSpeed);
-            if (rightSpeed >= -0.2f && rightSpeed <= 0.2f)
+            if (rightSpeed >= -decelerationCutoff && rightSpeed <= decelerationCutoff)
             {
-                //Debug.Log("ITS AT ZERO!!!!");
+                Debug.Log("0 X Speed");
             }
-            else if (rightSpeed > 0f)
+            else
             {
-                moveInput.x = -1f;
-            }
-            else if (rightSpeed < 0f)
-            {
-                moveInput.x = 1f;
+                float decelerationDirection = rightSpeed > 0f ? -1f : 1f;
+
+                Vector3 deceleration = cameraRotation.right * decelerationDirection;
+
+                rBody.AddForce(deceleration * decelForce, ForceMode.Force);
             }
         }
+        // Forward/Backward deceleration
         if (moveInput.y == 0)
         {
-            //Debug.Log("MoveInput y is Zero: " + moveInput.y);
+            //Debug.Log("MoveInput y is: " + moveInput.y);
             //Debug.Log("Forward Speed: " + forwardSpeed);
-            if (forwardSpeed >= -0.2f && forwardSpeed <= 0.2f)
+            if (forwardSpeed >= -decelerationCutoff && forwardSpeed <= decelerationCutoff)
             {
-                //Debug.Log("ITS AT ZERO!!!!");
+                Debug.Log("0 Z Speed");
             }
-            else if (forwardSpeed > 0f)
+            else
             {
-                moveInput.y = -1f;
-            }
-            else if (forwardSpeed < 0f)
-            {
-                moveInput.y = 1f;
+                float decelerationDirection = forwardSpeed > 0f ? -1f : 1f;
+
+                Vector3 deceleration = cameraRotation.forward * decelerationDirection;
+
+                rBody.AddForce(deceleration * decelForce, ForceMode.Force);
             }
         }
+        //Vertical deceleration
         if (verticalInput == 0)
         {
-            //Debug.Log("Vertical Input is Zero: " + verticalInput);
+            //Debug.Log("Vertical Input is: " + verticalInput);
             //Debug.Log("Up Speed: " + upSpeed);
-            if (upSpeed >= -0.2f && upSpeed <= 0.2f)
+            if (upSpeed >= -decelerationCutoff && upSpeed <= decelerationCutoff)
             {
-               //Debug.Log("ITS AT ZERO!!!!");
+               Debug.Log("0 Y Speed");
             }
-            else if (upSpeed > 0f)
+            else
             {
-                verticalInput = -1;
-            }
-            else if (upSpeed < 0f)
-            {
-                verticalInput = 1;
-            }
-        }
+                float decelerationDirection = upSpeed > 0f ? -1f : 1f;
 
-        if (moveInput.x == 0 && moveInput.y == 0 && verticalInput == 0)
+                rBody.AddForce(Vector3.up * decelerationDirection * decelForce, ForceMode.Force);
+            }
+        }       
+
+        //Set rbody to kinematic when minimal speed and no input
+        if (moveInput.x == 0 && moveInput.y == 0 && verticalInput == 0 && !rBody.isKinematic)
         {
-            //Debug.Log("Is this part activating??");
-            if (Mathf.Approximately(0, rBody.linearVelocity.x) || (rBody.linearVelocity.x < 0.15f && rBody.linearVelocity.x > -0.15f))
+            bool isMovingX = true;
+            bool isMovingY = true;
+            bool isMovingZ = true;
+
+            if (Mathf.Abs(rBody.linearVelocity.x) < decelerationCutoff)
             {
-                //Debug.Log("Velocity X");
-                rBody.isKinematic = true;
+                isMovingX = false;
             }
-            if (Mathf.Approximately(0, rBody.linearVelocity.y) || (rBody.linearVelocity.y < 0.15f && rBody.linearVelocity.y > -0.15f))
+
+            if (Mathf.Abs(rBody.linearVelocity.y) < decelerationCutoff)
             {
-                //Debug.Log("Velocity y");
-                rBody.isKinematic = true;
+                isMovingY = false;
             }
-            if (Mathf.Approximately(0, rBody.linearVelocity.z) || (rBody.linearVelocity.z < 0.15f && rBody.linearVelocity.z > -0.15f))
+
+            if (Mathf.Abs(rBody.linearVelocity.z) < decelerationCutoff)
             {
-                //Debug.Log("Velocity z");
+                isMovingZ = false;
+            }
+
+            if (!isMovingX && !isMovingY && !isMovingZ)
+            {
+                Debug.Log("Kinematic trigger");
                 rBody.isKinematic = true;
             }
         }
@@ -235,4 +248,17 @@ public class CharacterController : MonoBehaviour
     {
         can_enter_base = false;
     }
+
+
+
+
+
+
+    public bool IsPositive(float number)
+    {
+        return number > 0;
+    }
+
+
+
 }
