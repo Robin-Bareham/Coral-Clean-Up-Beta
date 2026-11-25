@@ -31,7 +31,7 @@ public class PhotoCameraBehaviour : MonoBehaviour
     private List<GameObject> UIObjects = new List<GameObject>(); //Which UI got hidden.
 
     private bool photoJustTaken = false;
-    private float photoShownFor = 5.0f; //5 seconds
+    public float photoShownFor = 5.0f; //5 seconds
     private float photoTimer;
 
 
