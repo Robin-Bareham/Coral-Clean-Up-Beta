@@ -4171,8 +4171,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterController
   PlayerControls: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   cameraRotation: {fileID: 1752735337}
-  moveForce: 10
-  verticalForce: 10
+  moveForce: 3
+  dampingForce: 1
   manager: {fileID: 679351719}
 --- !u!114 &1679805054
 MonoBehaviour:
